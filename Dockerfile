@@ -48,9 +48,9 @@ RUN cat > ./src/main/resources/static/index.html << 'EOF'
 </html>
 EOF
 
-# Build backend
+# Build backend (use mvn from maven image)
 COPY backend/src ./src
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Stage 3: Runtime
 FROM eclipse-temurin:21-jre-alpine
