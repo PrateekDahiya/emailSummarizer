@@ -1,5 +1,8 @@
 package com.gmailreader.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.core.type.TypeReference
 import com.gmailreader.entity.Email
 import com.gmailreader.entity.EmailClassification
 import com.gmailreader.entity.JobApplication
@@ -18,6 +21,8 @@ class JobApplicationService(
     private val jobApplicationRepository: JobApplicationRepository,
 ) {
     private val logger = LoggerFactory.getLogger(JobApplicationService::class.java)
+    private val mapper = jacksonObjectMapper()
+    private val typeRef = object : TypeReference<Map<String, Any>>() {}
 
     @Transactional
     fun extractJobApplications(gmailAccount: GmailAccount) {
@@ -85,7 +90,7 @@ class JobApplicationService(
     private fun parseEntities(entitiesJson: String?): Map<String, Any> {
         if (entitiesJson.isNullOrBlank()) return emptyMap()
         return try {
-            com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readValue<Map<String, Any>>(entitiesJson)
+            mapper.readValue(entitiesJson, typeRef)
         } catch (e: Exception) {
             emptyMap()
         }

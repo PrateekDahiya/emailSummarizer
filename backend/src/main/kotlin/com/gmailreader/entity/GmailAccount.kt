@@ -31,6 +31,9 @@ data class GmailAccount(
     @Column(name = "last_history_id", length = 255)
     var lastHistoryId: String? = null,
 
+    @Column(name = "last_sync_at")
+    var lastSyncAt: Instant? = null,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now(),

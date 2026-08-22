@@ -1,8 +1,12 @@
 package com.gmailreader.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.core.type.TypeReference
 import com.gmailreader.entity.Email
 import com.gmailreader.entity.EmailClassification
 import com.gmailreader.entity.Flight
+import com.gmailreader.entity.GmailAccount
 import com.gmailreader.entity.Hotel
 import com.gmailreader.entity.TravelTrip
 import com.gmailreader.entity.User
@@ -26,6 +30,8 @@ class TravelService(
     private val hotelRepository: HotelRepository,
 ) {
     private val logger = LoggerFactory.getLogger(TravelService::class.java)
+    private val mapper = jacksonObjectMapper()
+    private val typeRef = object : TypeReference<Map<String, Any>>() {}
 
     @Transactional
     fun extractTravelInfo(gmailAccount: GmailAccount) {
@@ -118,7 +124,7 @@ class TravelService(
             sourceEmailIds = arrayOf(email.id),
         )
         
-        if (trip.id == null || trip.id == UUID.randomUUID()) {
+        if (trip.id == null || trip.id == email.id) {
             return travelTripRepository.save(trip)
         }
         
@@ -133,7 +139,7 @@ class TravelService(
     private fun parseEntities(entitiesJson: String?): Map<String, Any> {
         if (entitiesJson.isNullOrBlank()) return emptyMap()
         return try {
-            com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readValue<Map<String, Any>>(entitiesJson)
+            mapper.readValue(entitiesJson, typeRef)
         } catch (e: Exception) {
             emptyMap()
         }

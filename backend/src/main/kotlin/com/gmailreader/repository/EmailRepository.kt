@@ -17,6 +17,8 @@ interface EmailRepository : JpaRepository<Email, UUID> {
     fun findByGmailMessageId(gmailMessageId: String): Email?
     fun findByThreadId(threadId: String): List<Email>
     fun existsByGmailMessageId(gmailMessageId: String): Boolean
+    fun countByGmailAccount(gmailAccount: GmailAccount): Long
+    fun countByGmailAccountAndIsProcessed(gmailAccount: GmailAccount, isProcessed: Boolean): Long
 
     @Query("SELECT e FROM Email e WHERE e.gmailAccount = :account AND e.receivedAt >= :since ORDER BY e.receivedAt DESC")
     fun findByGmailAccountAndReceivedAfter(@Param("account") account: GmailAccount, @Param("since") since: Instant): List<Email>

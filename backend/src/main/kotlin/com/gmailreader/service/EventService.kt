@@ -1,5 +1,8 @@
 package com.gmailreader.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.core.type.TypeReference
 import com.gmailreader.entity.Email
 import com.gmailreader.entity.EmailClassification
 import com.gmailreader.entity.Event
@@ -14,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.UUID
 
 @Service
 class EventService(
@@ -23,6 +25,8 @@ class EventService(
     private val travelTripRepository: TravelTripRepository,
 ) {
     private val logger = LoggerFactory.getLogger(EventService::class.java)
+    private val mapper = jacksonObjectMapper()
+    private val typeRef = object : TypeReference<Map<String, Any>>() {}
 
     @Transactional
     fun extractEvents(gmailAccount: GmailAccount) {
@@ -110,7 +114,7 @@ class EventService(
     private fun parseEntities(entitiesJson: String?): Map<String, Any> {
         if (entitiesJson.isNullOrBlank()) return emptyMap()
         return try {
-            com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().readValue<Map<String, Any>>(entitiesJson)
+            jacksonObjectMapper().readValue(entitiesJson, object : TypeReference<Map<String, Any>>() {})
         } catch (e: Exception) {
             emptyMap()
         }
