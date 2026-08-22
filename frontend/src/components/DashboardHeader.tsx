@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LogOut, RefreshCw, Menu } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useApi';
 
 interface DashboardHeaderProps {
@@ -12,8 +12,11 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
   const { user, logout } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
 
-  const timeOfDay = new Date().getHours() < 12 ? 'Good morning' : 
-                    new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+  const timeOfDay = new Date().getHours() < 12
+    ? 'Good morning'
+    : new Date().getHours() < 17
+      ? 'Good afternoon'
+      : 'Good evening';
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
@@ -57,8 +60,8 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
                     <LogOut className="w-4 h-4" />
                     Sign out
                   </button>
-</div>
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

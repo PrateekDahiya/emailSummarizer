@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useApi';
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { handleCallback } = useAuth();
@@ -45,7 +45,7 @@ export default function AuthCallback() {
     };
 
     handleAuth();
-  }, [code, authError, handleCallback, router, searchParams]);
+  }, [searchParams, handleCallback, router]);
 
   if (status === 'loading') {
     return (
@@ -88,5 +88,24 @@ export default function AuthCallback() {
         <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 animate-spin text-primary-600 mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

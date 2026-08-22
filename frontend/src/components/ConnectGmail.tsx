@@ -59,7 +59,7 @@ export function ConnectGmail({ onConnect, onSuccess }: ConnectGmailProps) {
     };
 
     handleAuth();
-  }, [code, authError, handleCallback, onSuccess, isLoading]);
+  }, [handleCallback, onSuccess, isLoading]);
 
   if (showSuccess) {
     return (
