@@ -1,0 +1,25 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Local env
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
