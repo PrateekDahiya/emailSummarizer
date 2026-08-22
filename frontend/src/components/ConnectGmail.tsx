@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useApi';
@@ -29,12 +29,21 @@ export function ConnectGmail({ onConnect, onSuccess }: ConnectGmailProps) {
   };
 
   // Check for OAuth callback
-  if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const authError = urlParams.get('error');
 
-    if (code && !isLoading) {
+    const handleAuth = async () => {
+      if (authError) {
+        setError('Authentication was cancelled or failed');
+        return;
+      }
+
+      if (!code || isLoading) return;
+
       try {
         setIsLoading(true);
         await handleCallback(code);
@@ -47,11 +56,10 @@ export function ConnectGmail({ onConnect, onSuccess }: ConnectGmailProps) {
         setError(err.message || 'Authentication failed');
         setIsLoading(false);
       }
-    } else if (authError) {
-      setError('Authentication was cancelled or failed');
-      setIsLoading(false);
-    }
-  }
+    };
+
+    handleAuth();
+  }, [code, authError, handleCallback, onSuccess, isLoading]);
 
   if (showSuccess) {
     return (
