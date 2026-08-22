@@ -70,7 +70,12 @@
             <artifactId>flyway-core</artifactId>
         </dependency>
 
-        <!-- Google APIs -->
+        <!-- Google APIs - Use newer versions from Google's BOM -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.3.0</version>
+        </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-gmail</artifactId>
