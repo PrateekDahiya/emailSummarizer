@@ -1,32 +1,32 @@
 package com.gmailreader.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
-import com.google.api.services.gmail.Gmail
-import com.google.api.services.gmail.model.ListMessagesResponse
-import com.google.api.services.gmail.model.Message
-import com.google.api.services.gmail.model.MessagePart
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.auth.http.HttpCredentialsAdapter
 import com.gmailreader.entity.Email
 import com.gmailreader.entity.GmailAccount
-import com.gmailreader.repository.EmailRepository
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.io.ByteArrayInputStream
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.Base64
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.CompletableFuture
 
 @Service
 class GmailService(
     private val emailRepository: EmailRepository,
 ) {
     private val logger = LoggerFactory.getLogger(GmailService::class.java)
-    private val JSON_FACTORY = GsonFactory.getDefaultInstance()
+    private val mapper = jacksonObjectMapper()
+    private val httpClient = HttpClient.newBuilder().build()
     private var httpTransport: com.google.api.client.http.HttpTransport? = null
 
     @Value("\${google.gmail.scopes}")
@@ -37,45 +37,76 @@ class GmailService(
         httpTransport = GoogleNetHttpTransport.newTrustedTransport()
     }
 
-    private fun buildGmailService(accessToken: String): Gmail {
-        val credentials = GoogleCredentials.create(
-            com.google.auth.oauth2.AccessToken(accessToken, null)
-        ).createScoped(scopes)
+    private fun buildCredentials(accessToken: String) = GoogleCredentials.create(
+        com.google.auth.oauth2.AccessToken(accessToken, null)
+    ).createScoped(scopes)
 
-        return Gmail.Builder(httpTransport!!, JSON_FACTORY, HttpCredentialsAdapter(credentials))
-            .setApplicationName("Gmail Intelligence Dashboard")
+    private fun buildHttpRequest(url: String, accessToken: String): HttpRequest {
+        return HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization", "Bearer $accessToken")
+            .header("Accept", "application/json")
+            .GET()
             .build()
     }
 
     fun fetchMessages(gmailAccount: GmailAccount, maxResults: Int = 50, pageToken: String? = null): ListMessagesResponse {
-        val service = buildGmailService(gmailAccount.user!!.accessToken!!)
-        return service.users().messages()
-            .list("me")
-            .setMaxResults(maxResults.toLong())
-            .setPageToken(pageToken)
-            .setLabelIds(listOf("INBOX"))
-            .execute()
+        val accessToken = gmailAccount.user!!.accessToken!!
+        var url = "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=$maxResults&labelIds=INBOX"
+        if (pageToken != null) {
+            url += "&pageToken=$pageToken"
+        }
+
+        val request = buildHttpRequest(url, accessToken)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        
+        if (response.statusCode() != 200) {
+            throw RuntimeException("Gmail API error: ${response.statusCode()} - ${response.body()}")
+        }
+        
+        return mapper.readValue<ListMessagesResponse>(response.body())
     }
 
     fun fetchMessage(gmailAccount: GmailAccount, messageId: String): Message {
-        val service = buildGmailService(gmailAccount.user!!.accessToken!!)
-        return service.users().messages()
-            .get("me", messageId)
-            .setFormat("full")
-            .execute()
+        val accessToken = gmailAccount.user!!.accessToken!!
+        val url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/$messageId?format=full"
+        
+        val request = buildHttpRequest(url, accessToken)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        
+        if (response.statusCode() != 200) {
+            throw RuntimeException("Gmail API error: ${response.statusCode()} - ${response.body()}")
+        }
+        
+        return mapper.readValue<Message>(response.body())
     }
 
-    fun fetchThread(gmailAccount: GmailAccount, threadId: String): com.google.api.services.gmail.model.Thread {
-        val service = buildGmailService(gmailAccount.user!!.accessToken!!)
-        return service.users().threads()
-            .get("me", threadId)
-            .setFormat("full")
-            .execute()
+    fun fetchThread(gmailAccount: GmailAccount, threadId: String): Thread {
+        val accessToken = gmailAccount.user!!.accessToken!!
+        val url = "https://gmail.googleapis.com/gmail/v1/users/me/threads/$threadId?format=full"
+        
+        val request = buildHttpRequest(url, accessToken)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        
+        if (response.statusCode() != 200) {
+            throw RuntimeException("Gmail API error: ${response.statusCode()} - ${response.body()}")
+        }
+        
+        return mapper.readValue<Thread>(response.body())
     }
 
-    fun getProfile(gmailAccount: GmailAccount): com.google.api.services.gmail.model.Profile {
-        val service = buildGmailService(gmailAccount.user!!.accessToken!!)
-        return service.users().getProfile("me").execute()
+    fun getProfile(gmailAccount: GmailAccount): Profile {
+        val accessToken = gmailAccount.user!!.accessToken!!
+        val url = "https://gmail.googleapis.com/gmail/v1/users/me/profile"
+        
+        val request = buildHttpRequest(url, accessToken)
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        
+        if (response.statusCode() != 200) {
+            throw RuntimeException("Gmail API error: ${response.statusCode()} - ${response.body()}")
+        }
+        
+        return mapper.readValue<Profile>(response.body())
     }
 
     fun parseMessage(gmailAccount: GmailAccount, message: Message): Email {
@@ -202,3 +233,55 @@ class GmailService(
         }
     }
 }
+
+// DTOs for Gmail API responses
+data class ListMessagesResponse(
+    val messages: List<MessageRef>? = null,
+    val nextPageToken: String? = null,
+    val resultSizeEstimate: Long = 0
+)
+
+data class MessageRef(
+    val id: String? = null,
+    val threadId: String? = null
+)
+
+data class Message(
+    val id: String? = null,
+    val threadId: String? = null,
+    val labelIds: List<String>? = null,
+    val snippet: String? = null,
+    val payload: MessagePart? = null
+)
+
+data class MessagePart(
+    val partId: String? = null,
+    val mimeType: String? = null,
+    val filename: String? = null,
+    val headers: List<Header>? = null,
+    val body: Body? = null,
+    val parts: List<MessagePart>? = null
+)
+
+data class Header(
+    val name: String? = null,
+    val value: String? = null
+)
+
+data class Body(
+    val size: Int? = null,
+    val data: String? = null,
+    val attachmentId: String? = null
+)
+
+data class Thread(
+    val id: String? = null,
+    val messages: List<Message>? = null
+)
+
+data class Profile(
+    val emailAddress: String? = null,
+    val messagesTotal: Long = 0,
+    val threadsTotal: Long = 0,
+    val historyId: String? = null
+)
